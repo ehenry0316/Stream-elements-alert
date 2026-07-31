@@ -1,5 +1,5 @@
 /*
- * AC Tactical HUD v1.2.0 – Raid Mode
+ * AC Tactical HUD v1.3.0 — Recon Mode
  * StreamElements Custom Widget
  * Event routing and restart-safe Web Animations timeline.
  */
@@ -63,6 +63,21 @@ const raidTimings = {
   confirm: 2780,
   settle: 3900,
   hide: 7350
+};
+
+/* ===== FOLLOW MODE ===== */
+
+const followTimings = {
+  arrival: 0,
+  frame: 80,
+  scan: 350,
+  header: 470,
+  logoAuth: 590,
+  username: 760,
+  footer: 1110,
+  progress: 1190,
+  online: 1660,
+  hide: 4700
 };
 
 window.addEventListener("onEventReceived", ({ detail = {} }) => {
@@ -186,6 +201,11 @@ function playTimeline(type, generation) {
     return;
   }
 
+  if (type === "follow") {
+    playFollowTimeline(generation);
+    return;
+  }
+
   const urgent = type === "raid" || type === "gift";
   const username = hud.message.querySelector("#username");
 
@@ -279,6 +299,106 @@ function playTimeline(type, generation) {
       { opacity: 0, transform: "translate3d(0,8px,0) scale(.99)" }
     ], motion(500, 0, "ease-in"));
   }, timings.hide, generation);
+}
+
+/* ===== FOLLOW MODE ===== */
+
+function playFollowTimeline(generation) {
+  const username = hud.message.querySelector("#username");
+
+  animate(hud.alert, [
+    { opacity: 0, transform: "translate3d(0,-10px,0) scale(.988)" },
+    { opacity: 1, transform: "translate3d(0,0,0) scale(1)" }
+  ], motion(330, followTimings.arrival, "cubic-bezier(.18,.78,.22,1)"));
+
+  hud.segments.forEach((segment, index) => {
+    const direction = segment.closest(".ac-segments-left") ? 15 : -15;
+    animate(segment, [
+      { opacity: 0, transform: `translate3d(${direction}px,0,0) scaleX(0)` },
+      { opacity: 1, transform: "translate3d(0,0,0) scaleX(1)" }
+    ], motion(330, followTimings.frame + index * 32, "cubic-bezier(.16,.82,.2,1)"));
+  });
+
+  hud.corners.forEach((corner, index) => animate(corner, [
+    { opacity: 0, transform: cornerStart(corner) },
+    { opacity: 1, transform: "translate3d(0,0,0)" }
+  ], motion(280, followTimings.frame + 45 + index * 14, "cubic-bezier(.14,.86,.2,1)")));
+
+  /* ===== RECON SCANNER ===== */
+
+  animate(hud.scan, [
+    { opacity: 0, transform: "translate3d(-230%,0,0) skewX(-14deg)" },
+    { opacity: 0.38, offset: 0.07 },
+    { opacity: 0.32, offset: 0.9 },
+    { opacity: 0, transform: "translate3d(790%,0,0) skewX(-14deg)" }
+  ], motion(980, followTimings.scan, "linear"));
+
+  // Information appears as the scanner reaches each horizontal region.
+  reveal(hud.header, followTimings.header, 300, "10px", "7px");
+  flash(hud.header, followTimings.header + 115, 1.55);
+
+  /* ===== FOLLOW AUTHENTICATION ===== */
+
+  animate(hud.logoRing, [
+    { opacity: 0, transform: "scale(.82) rotate(-12deg)" },
+    { opacity: 1, transform: "scale(1.035) rotate(32deg)", offset: 0.72 },
+    { opacity: 1, transform: "scale(1) rotate(42deg)" }
+  ], motion(380, followTimings.logoAuth, "cubic-bezier(.18,.8,.24,1)"));
+
+  animate(hud.logo, [
+    { opacity: 0, transform: "scale(.88)", filter: "brightness(.72)" },
+    { opacity: 1, transform: "scale(1.025)", filter: "brightness(1.62)", offset: 0.7 },
+    { opacity: 1, transform: "scale(1)", filter: "brightness(1)" }
+  ], motion(340, followTimings.logoAuth + 25, "cubic-bezier(.18,.82,.24,1)"));
+
+  animate(hud.logoFlash, [
+    { opacity: 0, transform: "scale(.55)" },
+    { opacity: 0.54, transform: "scale(1.04)", offset: 0.4 },
+    { opacity: 0, transform: "scale(1.38)" }
+  ], motion(170, followTimings.logoAuth + 180, "ease-out"));
+
+  reveal(hud.message, followTimings.username, 300);
+  flash(username, followTimings.username + 105, 1.65);
+
+  animate(hud.divider, [
+    { transform: "translate3d(-120%,0,0)" },
+    { transform: "translate3d(465%,0,0)" }
+  ], motion(500, followTimings.username + 130, "cubic-bezier(.2,.72,.24,1)"));
+
+  reveal(hud.footer, followTimings.footer, 270);
+
+  /* ===== FOLLOW CONFIRMATION ===== */
+
+  animate(hud.progress, [
+    { transform: "scaleX(0)", filter: "brightness(1)" },
+    { filter: "brightness(1.48)", offset: 0.22 },
+    { transform: "scaleX(1)", filter: "brightness(1)" }
+  ], motion(430, followTimings.progress, "cubic-bezier(.16,.72,.2,1)"));
+
+  animate(hud.charge, [
+    { opacity: 0, transform: "translate3d(-100%,0,0)" },
+    { opacity: 0.76, offset: 0.1 },
+    { opacity: 0.76, offset: 0.82 },
+    { opacity: 0, transform: "translate3d(1080%,0,0)" }
+  ], motion(430, followTimings.progress, "cubic-bezier(.16,.72,.2,1)"));
+
+  animate(hud.progressConfirm, [
+    { opacity: 0, transform: "scaleX(.96)" },
+    { opacity: 0.62, transform: "scaleX(1)", offset: 0.38 },
+    { opacity: 0, transform: "scaleX(1)" }
+  ], motion(220, followTimings.progress + 390, "ease-out"));
+
+  animate(hud.eventCode, [{ opacity: 0 }, { opacity: 1 }], motion(210, followTimings.progress + 245, "ease-out"));
+
+  later(() => hud.online.classList.add("is-online"), followTimings.online, generation);
+  later(() => hud.online.classList.remove("is-online"), followTimings.online + 980, generation);
+
+  later(() => {
+    animate(hud.alert, [
+      { opacity: 1, transform: "translate3d(0,0,0) scale(1)" },
+      { opacity: 0, transform: "translate3d(0,7px,0) scale(.992)" }
+    ], motion(470, 0, "cubic-bezier(.4,0,.78,.3)"));
+  }, followTimings.hide, generation);
 }
 
 /* ===== RAID MODE ===== */
