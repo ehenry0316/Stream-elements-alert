@@ -1,5 +1,5 @@
 /*
- * AC Tactical HUD v1.1.0
+ * AC Tactical HUD v1.2.0 – Raid Mode
  * StreamElements Custom Widget
  * Event routing and restart-safe Web Animations timeline.
  */
@@ -18,8 +18,11 @@ const hud = {
   online: document.querySelector(".ac-online"),
   eventCode: document.querySelector(".ac-event-code"),
   scan: document.querySelector(".ac-scan"),
+  scanTwo: document.querySelector(".ac-scan-two"),
+  raidAfterglow: document.querySelector(".ac-raid-afterglow"),
   progress: document.querySelector(".ac-progress-fill"),
   charge: document.querySelector(".ac-progress-charge"),
+  progressConfirm: document.querySelector(".ac-progress-confirm"),
   segments: [...document.querySelectorAll(".ac-segments span")],
   corners: [...document.querySelectorAll(".ac-corner")]
 };
@@ -42,6 +45,24 @@ const timings = {
   progress: 1580,
   online: 2440,
   hide: 6500
+};
+
+/* ===== RAID MODE ===== */
+
+const raidTimings = {
+  arrival: 0,
+  frame: 105,
+  firstScan: 520,
+  header: 690,
+  logoAuth: 820,
+  username: 1120,
+  divider: 1390,
+  secondScan: 1780,
+  progress: 1950,
+  online: 2690,
+  confirm: 2780,
+  settle: 3900,
+  hide: 7350
 };
 
 window.addEventListener("onEventReceived", ({ detail = {} }) => {
@@ -135,8 +156,11 @@ function resetHud() {
   setStyles(hud.footer, { opacity: "0", transform: "translate3d(0,5px,0)" });
   setStyles(hud.eventCode, { opacity: "0" });
   setStyles(hud.scan, { opacity: "0", transform: "translate3d(-190%,0,0) skewX(-16deg)" });
+  setStyles(hud.scanTwo, { opacity: "0", transform: "translate3d(-210%,0,0) skewX(-13deg)" });
+  setStyles(hud.raidAfterglow, { opacity: "0" });
   setStyles(hud.progress, { transform: "scaleX(0)", filter: "brightness(1)" });
   setStyles(hud.charge, { opacity: "0", transform: "translate3d(-100%,0,0)" });
+  setStyles(hud.progressConfirm, { opacity: "0", transform: "scaleX(.92)" });
 
   hud.segments.forEach((segment) => setStyles(segment, { opacity: "0", transform: "scaleX(0)" }));
   hud.corners.forEach((corner) => setStyles(corner, {
@@ -157,6 +181,11 @@ function cornerStart(corner) {
 }
 
 function playTimeline(type, generation) {
+  if (type === "raid") {
+    playRaidTimeline(generation);
+    return;
+  }
+
   const urgent = type === "raid" || type === "gift";
   const username = hud.message.querySelector("#username");
 
@@ -252,6 +281,161 @@ function playTimeline(type, generation) {
   }, timings.hide, generation);
 }
 
+/* ===== RAID MODE ===== */
+
+function playRaidTimeline(generation) {
+  const username = hud.message.querySelector("#username");
+
+  // A short, weighted arrival gives the panel authority without slowing the sequence.
+  animate(hud.alert, [
+    { opacity: 0, transform: "translate3d(0,-20px,0) scale(.972)", filter: "brightness(.72)" },
+    { opacity: 1, transform: "translate3d(0,2px,0) scale(1.004)", filter: "brightness(1.08)", offset: 0.78 },
+    { opacity: 1, transform: "translate3d(0,0,0) scale(1)", filter: "brightness(1)" }
+  ], motion(480, raidTimings.arrival, "cubic-bezier(.16,.82,.22,1)"));
+
+  hud.segments.forEach((segment, index) => {
+    const direction = segment.closest(".ac-segments-left") ? 24 : -24;
+    animate(segment, [
+      { opacity: 0, transform: `translate3d(${direction}px,0,0) scaleX(0)` },
+      { opacity: 1, transform: "translate3d(0,0,0) scaleX(1.08)", offset: 0.82 },
+      { opacity: 1, transform: "translate3d(0,0,0) scaleX(1)" }
+    ], motion(390, raidTimings.frame + index * 38, "cubic-bezier(.12,.86,.2,1)"));
+  });
+
+  hud.corners.forEach((corner, index) => animate(corner, [
+    { opacity: 0, transform: cornerStart(corner) },
+    { opacity: 1, transform: "translate3d(0,0,0) scale(1.12)", offset: 0.76 },
+    { opacity: 1, transform: "translate3d(0,0,0) scale(1)" }
+  ], motion(300, raidTimings.frame + 55 + index * 18, "cubic-bezier(.1,.9,.2,1)")));
+
+  /* ===== DUAL SCANNER: DETECTION PASS ===== */
+
+  animate(hud.scan, [
+    { opacity: 0, transform: "translate3d(-190%,0,0) skewX(-16deg)" },
+    { opacity: 0.58, offset: 0.08 },
+    { opacity: 0.48, offset: 0.9 },
+    { opacity: 0, transform: "translate3d(690%,0,0) skewX(-16deg)" }
+  ], motion(1260, raidTimings.firstScan, "linear"));
+
+  reveal(hud.header, raidTimings.header, 390, "12px", "7px");
+  flash(hud.header, raidTimings.header + 155, 2.25);
+  reveal(hud.message, raidTimings.username, 390);
+  flash(username, raidTimings.username + 155, 2.45);
+
+  /* ===== RAID AUTHENTICATION ===== */
+
+  animate(hud.logoRing, [
+    { opacity: 0, transform: "scale(.7) rotate(-28deg)" },
+    { opacity: 1, transform: "scale(1.08) rotate(125deg)", offset: 0.62 },
+    { opacity: 1, transform: "scale(1) rotate(205deg)", offset: 0.84 },
+    { opacity: 1, transform: "scale(1) rotate(220deg)" }
+  ], motion(820, raidTimings.logoAuth, "cubic-bezier(.16,.78,.2,1)"));
+
+  later(() => {
+    animate(hud.logoRing, [
+      { transform: "scale(1) rotate(220deg)" },
+      { transform: "scale(1) rotate(580deg)" }
+    ], {
+      duration: 18000,
+      easing: "linear",
+      fill: "forwards",
+      iterations: Infinity
+    });
+  }, raidTimings.logoAuth + 820, generation);
+
+  animate(hud.logo, [
+    { opacity: 0, transform: "scale(.8)", filter: "brightness(.62)" },
+    { opacity: 1, transform: "scale(1.07)", filter: "brightness(2.55)", offset: 0.72 },
+    { opacity: 1, transform: "scale(1)", filter: "brightness(1)" }
+  ], motion(620, raidTimings.logoAuth + 40, "cubic-bezier(.16,.84,.24,1)"));
+
+  animate(hud.logoFlash, [
+    { opacity: 0, transform: "scale(.35)" },
+    { opacity: 1, transform: "scale(1.2)", offset: 0.32 },
+    { opacity: 0, transform: "scale(1.9)" }
+  ], motion(260, raidTimings.logoAuth + 400, "ease-out"));
+
+  animate(hud.raidAfterglow, [
+    { opacity: 0 },
+    { opacity: 0.72, offset: 0.32 },
+    { opacity: 0.18, offset: 0.7 },
+    { opacity: 0 }
+  ], motion(1050, raidTimings.logoAuth + 360, "ease-out"));
+
+  animate(hud.divider, [
+    { transform: "translate3d(-120%,0,0)" },
+    { transform: "translate3d(465%,0,0)" }
+  ], motion(650, raidTimings.divider, "cubic-bezier(.2,.72,.24,1)"));
+  reveal(hud.footer, raidTimings.divider + 210, 330);
+
+  /* ===== DUAL SCANNER: CONFIRMATION PASS ===== */
+
+  animate(hud.scanTwo, [
+    { opacity: 0, transform: "translate3d(-210%,0,0) skewX(-13deg)" },
+    { opacity: 0.66, offset: 0.09 },
+    { opacity: 0.5, offset: 0.87 },
+    { opacity: 0, transform: "translate3d(790%,0,0) skewX(-13deg)" }
+  ], motion(980, raidTimings.secondScan, "linear"));
+
+  flash(hud.message, raidTimings.secondScan + 270, 1.72);
+
+  /* ===== RAID PROGRESS SYSTEM ===== */
+
+  animate(hud.progress, [
+    { transform: "scaleX(0)", filter: "brightness(1)" },
+    { filter: "brightness(1.85)", offset: 0.18 },
+    { transform: "scaleX(1)", filter: "brightness(1.08)" }
+  ], motion(720, raidTimings.progress, "cubic-bezier(.16,.72,.18,1)"));
+
+  animate(hud.charge, [
+    { opacity: 0, transform: "translate3d(-100%,0,0)" },
+    { opacity: 1, offset: 0.08 },
+    { opacity: 1, offset: 0.86 },
+    { opacity: 0, transform: "translate3d(1080%,0,0)" }
+  ], motion(720, raidTimings.progress, "cubic-bezier(.16,.72,.18,1)"));
+
+  animate(hud.eventCode, [{ opacity: 0 }, { opacity: 1 }], motion(250, raidTimings.progress + 430, "ease-out"));
+
+  animate(hud.progressConfirm, [
+    { opacity: 0, transform: "scaleX(.92)" },
+    { opacity: 0.9, transform: "scaleX(1)", offset: 0.36 },
+    { opacity: 0, transform: "scaleX(1)" }
+  ], motion(320, raidTimings.online - 45, "ease-out"));
+
+  later(() => hud.online.classList.add("is-online"), raidTimings.online, generation);
+
+  /* ===== REINFORCEMENT PULSE ===== */
+
+  for (let pulse = 0; pulse < 2; pulse += 1) {
+    const delay = raidTimings.confirm + pulse * 520;
+    animate(hud.alert, [
+      { boxShadow: "0 22px 60px rgba(0,0,0,.72), inset 0 1px 0 rgba(255,255,255,.09)" },
+      { boxShadow: "0 22px 60px rgba(0,0,0,.72), 0 0 19px rgba(184,50,57,.28), inset 0 0 18px rgba(184,50,57,.075)", offset: 0.42 },
+      { boxShadow: "0 22px 60px rgba(0,0,0,.72), inset 0 1px 0 rgba(255,255,255,.09)" }
+    ], motion(440, delay, "ease-in-out"));
+
+    hud.corners.forEach((corner) => animate(corner, [
+      { filter: "brightness(1)", borderColor: "rgba(239,239,239,.82)" },
+      { filter: "brightness(1.45)", borderColor: "rgba(184,50,57,.82)", offset: 0.42 },
+      { filter: "brightness(1)", borderColor: "rgba(239,239,239,.82)" }
+    ], motion(440, delay, "ease-in-out")));
+  }
+
+  animate(hud.alert, [
+    { transform: "translate3d(0,0,0) scale(1)" },
+    { transform: "translate3d(0,1px,0) scale(.998)" },
+    { transform: "translate3d(0,0,0) scale(1)" }
+  ], motion(700, raidTimings.settle, "ease-in-out"));
+
+  later(() => {
+    hud.online.classList.remove("is-online");
+    animate(hud.alert, [
+      { opacity: 1, transform: "translate3d(0,0,0) scale(1)", filter: "brightness(1)" },
+      { opacity: 0, transform: "translate3d(0,8px,0) scale(.99)", filter: "brightness(.82)" }
+    ], motion(620, 0, "cubic-bezier(.4,0,.8,.3)"));
+  }, raidTimings.hide, generation);
+}
+
 function motion(duration, delay, easing) {
   return { duration, delay, easing, fill: "forwards" };
 }
@@ -271,4 +455,3 @@ function flash(element, delay, brightness) {
     { filter: "brightness(1)", textShadow: "0 0 0 rgba(255,255,255,0)" }
   ], motion(300, delay, "ease-out"));
 }
-
