@@ -1,5 +1,5 @@
 /*
- * AC Tactical HUD v1.2.0 – Raid Mode
+ * AC Tactical HUD v1.3.0 — Recon Mode
  * StreamElements Custom Widget
  * Industrial matte black HUD with platinum and tactical-red accents.
  */
@@ -483,6 +483,45 @@ body {
   );
 }
 
+/* ===== FOLLOW EFFECTS ===== */
+
+.ac-alert[data-type="follow"] .ac-scan {
+  width: 17%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(239, 239, 239, 0.05) 18%,
+    rgba(255, 255, 255, 0.24) 50%,
+    rgba(239, 239, 239, 0.08) 78%,
+    transparent 100%
+  );
+}
+
+.ac-alert[data-type="follow"] .ac-logo-flash {
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.76) 0%,
+    rgba(239, 239, 239, 0.16) 36%,
+    transparent 68%
+  );
+}
+
+/* ===== RECON MODE ===== */
+
+.ac-alert[data-type="follow"] .ac-progress-fill {
+  background: linear-gradient(
+    90deg,
+    var(--platinum-faint),
+    var(--platinum-soft) 76%,
+    var(--platinum)
+  );
+}
+
+.ac-alert[data-type="follow"] .ac-progress-confirm {
+  background: var(--platinum);
+  box-shadow: 0 0 9px var(--platinum-soft);
+}
+
 @keyframes acLedOnline {
   0%, 100% { opacity: 0.58; }
   50% { opacity: 1; }
@@ -491,4 +530,3 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .ac-online.is-online .ac-led { animation: none; }
 }
-
