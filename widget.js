@@ -1,10 +1,105 @@
 /*
- * AC Tactical HUD v1.3.0 — Recon Mode
+ * AC Tactical HUD v1.4.0 — Recon Mode
  * StreamElements Custom Widget
- * Event routing and restart-safe Web Animations timeline.
+ * Event routing, self-contained audio, and restart-safe Web Animations timeline.
  */
 
 "use strict";
+
+/* ===== AUDIO SETTINGS ===== */
+
+// All volume values are from 0 (silent) to 1 (full volume).
+const MASTER_VOLUME = 0.8;
+
+const ALERT_VOLUMES = {
+  follow: 0.75,
+  sub: 0.85,
+  gift: 0.9,
+  bits: 0.8,
+  tip: 0.85,
+  raid: 1
+};
+
+// Each alert uses an array so more variants can be added at any time.
+const ALERT_SOUNDS = {
+  follow: ["https://raw.githubusercontent.com/ehenry0316/Stream-elements-alert/main/follow.mp3"],
+  sub: ["https://raw.githubusercontent.com/ehenry0316/Stream-elements-alert/main/subscriber.mp3"],
+  gift: ["https://raw.githubusercontent.com/ehenry0316/Stream-elements-alert/main/gift.mp3"],
+  bits: ["https://raw.githubusercontent.com/ehenry0316/Stream-elements-alert/main/bits.mp3"],
+  tip: ["https://raw.githubusercontent.com/ehenry0316/Stream-elements-alert/main/tip.mp3"],
+  raid: ["https://raw.githubusercontent.com/ehenry0316/Stream-elements-alert/main/raid.mp3"]
+};
+
+const audioCache = new Map();
+let activeAudio = null;
+
+function createCachedAudio(url) {
+  if (typeof Audio !== "function") return null;
+
+  try {
+    const audio = new Audio();
+    audio.preload = "auto";
+    audio.src = url;
+    audio.addEventListener("error", () => {
+      console.warn(`[AC Tactical HUD] Audio unavailable: ${url}`);
+    });
+    audio.load();
+    return audio;
+  } catch (error) {
+    console.warn(`[AC Tactical HUD] Could not initialize audio: ${url}`, error);
+    return null;
+  }
+}
+
+function preloadAlertSounds() {
+  Object.values(ALERT_SOUNDS).flat().forEach((url) => {
+    if (!audioCache.has(url)) audioCache.set(url, createCachedAudio(url));
+  });
+}
+
+function stopActiveAudio() {
+  if (!activeAudio) return;
+
+  try {
+    activeAudio.pause();
+    activeAudio.currentTime = 0;
+  } catch (error) {
+    console.warn("[AC Tactical HUD] Could not reset active audio.", error);
+  }
+
+  activeAudio = null;
+}
+
+function playAlertSound(type) {
+  stopActiveAudio();
+
+  const variants = ALERT_SOUNDS[type];
+  if (!Array.isArray(variants) || variants.length === 0) return;
+
+  const url = variants[Math.floor(Math.random() * variants.length)];
+  const audio = audioCache.get(url);
+  if (!audio) return;
+
+  try {
+    audio.pause();
+    audio.currentTime = 0;
+    audio.volume = Math.min(1, Math.max(0, MASTER_VOLUME * (ALERT_VOLUMES[type] ?? 1)));
+    activeAudio = audio;
+
+    const playback = audio.play();
+    if (playback && typeof playback.catch === "function") {
+      playback.catch((error) => {
+        if (activeAudio === audio) activeAudio = null;
+        console.warn(`[AC Tactical HUD] Audio playback was blocked or failed for ${type}.`, error);
+      });
+    }
+  } catch (error) {
+    if (activeAudio === audio) activeAudio = null;
+    console.warn(`[AC Tactical HUD] Audio playback failed for ${type}.`, error);
+  }
+}
+
+preloadAlertSounds();
 
 const hud = {
   alert: document.querySelector(".ac-alert"),
@@ -123,6 +218,7 @@ function user(name) {
 
 function showAlert(header, message, type, code) {
   stopTimeline();
+  playAlertSound(type);
   hud.alert.dataset.type = type;
   hud.header.textContent = header;
   hud.message.innerHTML = message;
@@ -574,4 +670,3 @@ function flash(element, delay, brightness) {
     { filter: `brightness(${brightness})`, textShadow: "0 0 12px rgba(225,235,245,.7)", offset: 0.45 },
     { filter: "brightness(1)", textShadow: "0 0 0 rgba(255,255,255,0)" }
   ], motion(300, delay, "ease-out"));
-}
