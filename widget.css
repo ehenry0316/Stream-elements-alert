@@ -1,5 +1,5 @@
 /*
- * AC Tactical HUD v1.1.0
+ * AC Tactical HUD v1.2.0 – Raid Mode
  * StreamElements Custom Widget
  * Industrial matte black HUD with platinum and tactical-red accents.
  */
@@ -130,6 +130,13 @@ body {
   filter: blur(0.2px);
   mix-blend-mode: screen;
   will-change: transform, opacity;
+}
+
+.ac-scan-two,
+.ac-raid-afterglow,
+.ac-progress-confirm {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .ac-corner {
@@ -400,6 +407,14 @@ body {
   will-change: transform, opacity;
 }
 
+.ac-progress-confirm {
+  position: absolute;
+  inset: -3px 0;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent-soft);
+  will-change: opacity, transform;
+}
+
 .ac-event-code {
   color: var(--accent-soft);
   font-size: 9px;
@@ -413,6 +428,59 @@ body {
 .ac-alert[data-type="gift"] .ac-event-code,
 .ac-alert[data-type="raid"] .ac-event-code {
   color: var(--red);
+}
+
+/* ===== RAID EFFECTS ===== */
+
+.ac-alert[data-type="raid"] {
+  border-color: rgba(239, 239, 239, 0.2);
+}
+
+.ac-alert[data-type="raid"] .ac-corner {
+  border-color: rgba(239, 239, 239, 0.82);
+}
+
+.ac-raid-afterglow {
+  position: absolute;
+  z-index: 1;
+  inset: -18%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(184, 50, 57, 0.1) 0%,
+    rgba(184, 50, 57, 0.035) 42%,
+    transparent 72%
+  );
+  mix-blend-mode: screen;
+  will-change: opacity;
+}
+
+/* ===== SCANNER PASS TWO ===== */
+
+.ac-scan-two {
+  z-index: 3;
+  width: 18%;
+  transform: translate3d(-210%, 0, 0) skewX(-13deg);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(184, 50, 57, 0.08) 22%,
+    rgba(255, 255, 255, 0.28) 50%,
+    rgba(184, 50, 57, 0.13) 76%,
+    transparent 100%
+  );
+  filter: blur(0.15px);
+}
+
+/* ===== RAID AUTHENTICATION ===== */
+
+.ac-alert[data-type="raid"] .ac-logo-flash {
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(239, 239, 239, 0.34) 28%,
+    rgba(184, 50, 57, 0.18) 48%,
+    transparent 72%
+  );
 }
 
 @keyframes acLedOnline {
