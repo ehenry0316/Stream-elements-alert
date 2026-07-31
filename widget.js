@@ -670,3 +670,4 @@ function flash(element, delay, brightness) {
     { filter: `brightness(${brightness})`, textShadow: "0 0 12px rgba(225,235,245,.7)", offset: 0.45 },
     { filter: "brightness(1)", textShadow: "0 0 0 rgba(255,255,255,0)" }
   ], motion(300, delay, "ease-out"));
+}
